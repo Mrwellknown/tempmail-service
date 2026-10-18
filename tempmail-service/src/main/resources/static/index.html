@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temp Mail - Ephemeral Inbox</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-hover: #0284c7;
+            --green: #22c55e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .mailbox-bar {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .address-box {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-grow: 1;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background-color: var(--green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--green);
+        }
+
+        #emailDisplay {
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: var(--text-main);
+            word-break: break-all;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        button {
+            background-color: var(--accent);
+            color: #0f172a;
+            border: none;
+            border-radius: 6px;
+            padding: 0.6rem 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+            color: white;
+        }
+
+        button.secondary {
+            background-color: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        button.secondary:hover {
+            background-color: var(--border-color);
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 1.5rem;
+            min-height: 480px;
+        }
+
+        @media (max-width: 768px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .inbox-list {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow-y: auto;
+            max-height: 550px;
+        }
+
+        .inbox-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .email-item {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        .email-item:hover {
+            background-color: #334155;
+        }
+
+        .email-item.active {
+            border-left: 3px solid var(--accent);
+            background-color: rgba(56, 189, 248, 0.1);
+        }
+
+        .email-item .sender {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 0.25rem;
+        }
+
+        .email-item .subject {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0.25rem;
+        }
+
+        .email-item .time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state {
+            padding: 3rem 1rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .email-viewer {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viewer-header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .viewer-subject {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+
+        .viewer-meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .viewer-body {
+            flex-grow: 1;
+            background: #ffffff;
+            color: #1e293b;
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-y: auto;
+            min-height: 250px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Ephemeral Temp Mail</h1>
+        <p>Catch-all disposable inboxes with real-time push streaming</p>
+    </header>
+
+    <div class="mailbox-bar">
+        <div class="address-box">
+            <span class="status-dot"></span>
+            <span id="emailDisplay">Generating mailbox...</span>
+        </div>
+        <div class="btn-group">
+            <button id="copyBtn" class="secondary" onclick="copyAddress()">Copy</button>
+            <button onclick="createNewMailbox()">New Address</button>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        <div class="inbox-list">
+            <div class="inbox-header">Messages (<span id="msgCount">0</span>)</div>
+            <div id="emailItems">
+                <div class="empty-state">Waiting for incoming emails...</div>
+            </div>
+        </div>
+
+        <div class="email-viewer" id="emailViewer">
+            <div class="empty-state" style="margin: auto;">
+                Select an email from the left pane to view its content.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentEmail = "";
+    let eventSource = null;
+    let storedMessages = [];
+
+    async function createNewMailbox() {
+        if (eventSource) {
+            eventSource.close();
+        }
+
+        try {
+            const res = await fetch('/api/v1/mailboxes/generate', { method: 'POST' });
+            const data = await res.json();
+            currentEmail = data.email;
+            document.getElementById('emailDisplay').innerText = currentEmail;
+
+            storedMessages = [];
+            renderMessageList();
+            resetViewer();
+
+            startEventStream(currentEmail);
+        } catch (err) {
+            console.error('Failed to generate mailbox:', err);
+            document.getElementById('emailDisplay').innerText = "Error generating address";
+        }
+    }
+
+    function startEventStream(email) {
+        eventSource = new EventSource(`/api/v1/mailboxes/${email}/stream`);
+
+        eventSource.addEventListener('INIT', (e) => {
+            console.log('SSE Stream Active:', e.data);
+        });
+
+        eventSource.addEventListener('NEW_EMAIL', (e) => {
+            const newMsg = JSON.parse(e.data);
+            storedMessages.unshift(newMsg);
+            renderMessageList();
+
+            // Automatically open if it is the first email received
+            if (storedMessages.length === 1) {
+                viewMessage(newMsg.id);
+            }
+        });
+
+        eventSource.onerror = (err) => {
+            console.warn('SSE connection disconnected. Browser will auto-reconnect...', err);
+        };
+    }
+
+    function renderMessageList() {
+        const container = document.getElementById('emailItems');
+        document.getElementById('msgCount').innerText = storedMessages.length;
+
+        if (storedMessages.length === 0) {
+            container.innerHTML = '<div class="empty-state">Waiting for incoming emails...</div>';
+            return;
+        }
+
+        container.innerHTML = storedMessages.map(msg => `
+            <div class="email-item" id="msg-${msg.id}" onclick="viewMessage(${msg.id})">
+                <div class="sender">${escapeHtml(msg.sender)}</div>
+                <div class="subject">${escapeHtml(msg.subject || '(No Subject)')}</div>
+                <div class="time">${new Date(msg.receivedAt).toLocaleTimeString()}</div>
+            </div>
+        `).join('');
+    }
+
+    function viewMessage(id) {
+        const msg = storedMessages.find(m => m.id === id);
+        if (!msg) return;
+
+        document.querySelectorAll('.email-item').forEach(el => el.classList.remove('active'));
+        const activeItem = document.getElementById(`msg-${id}`);
+        if (activeItem) activeItem.classList.add('active');
+
+        const viewer = document.getElementById('emailViewer');
+        viewer.innerHTML = `
+            <div class="viewer-header">
+                <div class="viewer-subject">${escapeHtml(msg.subject || '(No Subject)')}</div>
+                <div class="viewer-meta">
+                    <div><strong>From:</strong> ${escapeHtml(msg.sender)}</div>
+                    <div><strong>To:</strong> ${escapeHtml(msg.recipient)}</div>
+                    <div><strong>Received:</strong> ${new Date(msg.receivedAt).toLocaleString()}</div>
+                </div>
+            </div>
+            <div class="viewer-body">
+                ${sanitizeOrRender(msg.body)}
+            </div>
+        `;
+    }
+
+    function resetViewer() {
+        document.getElementById('emailViewer').innerHTML = `
+            <div class="empty-state" style="margin: auto;">
+                Select an email from the left pane to view its content.
+            </div>
+        `;
+    }
+
+    function sanitizeOrRender(body) {
+        if (!body) return '<em>(Empty message body)</em>';
+        // If it looks like HTML, display in an isolated iframe or direct snippet
+        if (body.trim().startsWith('<') && body.trim().endsWith('>')) {
+            return `<iframe srcdoc="${escapeAttr(body)}" style="width:100%; height:100%; border:none; min-height: 350px;"></iframe>`;
+        }
+        return `<pre style="white-space: pre-wrap; word-break: break-word;">${escapeHtml(body)}</pre>`;
+    }
+
+    function copyAddress() {
+        if (!currentEmail) return;
+        navigator.clipboard.writeText(currentEmail);
+        const btn = document.getElementById('copyBtn');
+        btn.innerText = 'Copied!';
+        setTimeout(() => btn.innerText = 'Copy', 1500);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function escapeAttr(str) {
+        if (!str) return '';
+        return str.replace(/"/g, "&quot;");
+    }
+
+    window.onload = createNewMailbox;
+</script>
+
+</body>
+</html>
